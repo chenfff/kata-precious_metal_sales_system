@@ -1,7 +1,20 @@
 package com.coding.sales;
 
+import com.coding.sales.entity.Member;
+import com.coding.sales.entity.ProductInfo;
 import com.coding.sales.input.OrderCommand;
+import com.coding.sales.input.OrderItemCommand;
+import com.coding.sales.input.PaymentCommand;
+import com.coding.sales.output.DiscountItemRepresentation;
+import com.coding.sales.output.OrderItemRepresentation;
 import com.coding.sales.output.OrderRepresentation;
+import com.coding.sales.output.PaymentRepresentation;
+import com.sun.codemodel.internal.JForEach;
+
+import java.math.BigDecimal;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * 销售系统的主入口
@@ -34,7 +47,236 @@ public class OrderApp {
         OrderRepresentation result = null;
 
         //TODO: 请完成需求指定的功能
+        //初始化产品信息
+        Map<String,Object> productInfoMap = initProduct();
+        String orderId = command.getOrderId(); //订单号
+        Date createTime = StringToDate(command.getCreateTime()); //创建时间
+        String memberNo = command.getMemberId(); //客户号
+        List<OrderItemRepresentation> items = new ArrayList<OrderItemRepresentation>();;
+        Member member = (Member) Member.memberMap.get(memberNo);
+        String oldMemberType = member.getMemberType();
+        String memberName = member.getMemberName();//客户姓名
+        BigDecimal totalPrice = new BigDecimal("0.00");;
+        int oldMemberPoints = member.getMemberPoints(); //购买商品前积分值
+        List<DiscountItemRepresentation> discounts = new ArrayList<DiscountItemRepresentation>();
+        BigDecimal totalDiscountPrice = new BigDecimal("0.00");
+        BigDecimal receivables = new BigDecimal("0.00");
+        List<PaymentRepresentation> payments = new ArrayList<PaymentRepresentation>();
+        List<PaymentCommand> frontPayments =  command.getPayments();
+        for(PaymentCommand frontPayment:frontPayments){
+            payments.add(new PaymentRepresentation(frontPayment.getType(),frontPayment.getAmount()));
+        }
+        List<String> discountCards; //付款使用的打折券
 
+        //根据客户传过来的商品编号 取出该商品的属性
+        List<OrderItemCommand> orderItemCommands = command.getItems();
+        //客户使用的优惠券
+        discountCards = command.getDiscounts();
+        for(OrderItemCommand orderItemCommand:orderItemCommands){
+
+            //客户购买的产品的ID
+            String product =  orderItemCommand.getProduct();
+            //用户购买的数量
+            BigDecimal amount = orderItemCommand.getAmount();
+            //客户使用的优惠券
+
+            ProductInfo productInfo = (ProductInfo) productInfoMap.get(product);
+
+            //计算价格总合计
+            BigDecimal priceSum = productInfo.getPrice().multiply(amount);
+            totalPrice = totalPrice.add(priceSum);
+            //客户如果使用了优惠券
+            if(discountCards != null && discountCards.size()>0){
+                String discountCard = discountCards.get(0);
+                //如果折扣不为空或者满减优惠不为空
+                if(isNotBlank(productInfo.getDiscount())|| isNotBlank(productInfo.getSubtractType())){
+                    DiscountItemRepresentation discountItemRepresentation = calculateDiscount(discountCard,amount,priceSum,productInfo);
+                    if(discountItemRepresentation.getDiscount().compareTo(BigDecimal.ZERO) > 0){
+                        totalDiscountPrice = totalDiscountPrice.add(discountItemRepresentation.getDiscount());
+                        discounts.add(discountItemRepresentation);
+                    }
+                }
+            }
+            items.add(new OrderItemRepresentation(productInfo.getProduct(),  productInfo.getProductName(), productInfo.getPrice(),  amount, priceSum));
+
+        }
+        receivables = totalPrice.subtract(totalDiscountPrice);
+        member.addPointsIncreased(receivables);
+        int memberPoints = member.getMemberPoints();
+        int memberPointsIncreased =  memberPoints - oldMemberPoints;
+        String newMemberType = member.getMemberType();
+        result = new OrderRepresentation(orderId,createTime,memberNo,memberName,oldMemberType,newMemberType,memberPointsIncreased,memberPoints,items,totalPrice,discounts,
+                totalDiscountPrice,receivables,payments,discountCards);
         return result;
     }
+    public final static Map subtractTypeMap = new HashMap(){{
+        put("1","满3000减350");
+        put("2","每满2000元减30");
+        put("3","每满1000元减10");
+        put("4","第3件半价");
+        put("5","满3送1");
+    }};
+
+    public static Map<String,Object> initProduct(){
+        Map<String,Object> map = new HashMap<String,Object>();
+
+        ProductInfo productInfo = new ProductInfo();
+        //subtractType 1:满3000减350 2:每满2000元减30 3:每满1000元减10 4:第3件半价 5:满3送1
+        productInfo.setProduct("001001");
+        productInfo.setProductName("世园会五十国钱币册");
+        productInfo.setUnit("册");
+        productInfo.setPrice(BigDecimal.valueOf(998.00));
+        map.put("001001",productInfo);
+
+        ProductInfo productInfo2 = new ProductInfo();
+        productInfo2.setProduct("001002");
+        productInfo2.setProductName("2019北京世园会纪念银章大全40g");
+        productInfo2.setUnit("盒");
+        productInfo2.setPrice(BigDecimal.valueOf(1380.00));
+        productInfo2.setDiscount("9折券");
+        map.put("001002",productInfo2);
+
+        ProductInfo productInfo3 = new ProductInfo();
+        productInfo3.setProduct("003001");
+        productInfo3.setProductName("招财进宝");
+        productInfo3.setUnit("条");
+        productInfo3.setPrice(BigDecimal.valueOf(1580.00));
+        productInfo3.setDiscount("95折券");
+        map.put("003001",productInfo3);
+
+        ProductInfo productInfo4 = new ProductInfo();
+        productInfo4.setProduct("003002");
+        productInfo4.setProductName("水晶之恋");
+        productInfo4.setUnit("条");
+        productInfo4.setPrice(BigDecimal.valueOf(980.00));
+        productInfo4.setSubtractType("4,5");
+        map.put("003002",productInfo4);
+
+        ProductInfo productInfo5 = new ProductInfo();
+        productInfo5.setProduct("002002");
+        productInfo5.setProductName("中国经典钱币套装");
+        productInfo5.setUnit("套");
+        productInfo5.setPrice(BigDecimal.valueOf(998.00));
+        productInfo5.setSubtractType("2,3");
+        map.put("002002",productInfo5);
+
+        ProductInfo productInfo6 = new ProductInfo();
+        productInfo6.setProduct("002001");
+        productInfo6.setProductName("守扩之羽比翼双飞4.8g");
+        productInfo6.setUnit("条");
+        productInfo6.setPrice(BigDecimal.valueOf(1080.00));
+        productInfo6.setSubtractType("4,5");
+        productInfo6.setDiscount("95折券");
+        map.put("002001",productInfo6);
+
+        ProductInfo productInfo7 = new ProductInfo();
+        productInfo7.setProduct("002003");
+        productInfo7.setProductName("中国银象棋12g");
+        productInfo7.setUnit("套");
+        productInfo7.setPrice(BigDecimal.valueOf(698.00));
+        productInfo7.setSubtractType("1,2,3");
+        productInfo7.setDiscount("9折券");
+        map.put("002003",productInfo7);
+        return map;
+    }
+
+    public DiscountItemRepresentation calculateDiscount(String discountCard,BigDecimal amount,BigDecimal sumPrice,ProductInfo productInfo){
+        BigDecimal maxDiscount = null;
+        BigDecimal discountPrice = null;
+        BigDecimal subTranctPrice = null;
+        BigDecimal price = productInfo.getPrice();
+        String productDiscount = productInfo.getDiscount();
+        Map<String,BigDecimal> discountMap = new HashMap<String,BigDecimal>();
+        discountMap.put("9折券",BigDecimal.valueOf(0.90));
+        discountMap.put("95折券",BigDecimal.valueOf(0.95));
+        BigDecimal discount = discountMap.get(discountCard);
+        List<BigDecimal> maxDiscountsList = new ArrayList<BigDecimal>();
+        if(discountCard.equals(productDiscount)){
+            discountPrice = sumPrice.multiply(new BigDecimal("1.00").subtract(discount));
+            maxDiscountsList.add(discountPrice);
+        }
+        //产品支持哪些满减优惠类型
+        String subTractType = productInfo.getSubtractType();
+
+        if(isNotBlank(subTractType)){
+            subTranctPrice =  calculateMaxSubTract(subTractType,amount,price,sumPrice);
+            maxDiscountsList.add(subTranctPrice);
+        }
+        maxDiscount = Collections.max(maxDiscountsList);
+
+        return new DiscountItemRepresentation(productInfo.getProduct(),productInfo.getProductName(),maxDiscount);
+    }
+
+    public BigDecimal calculateSubTract(BigDecimal sumPrice,BigDecimal comparePrice,BigDecimal subPrice){
+        BigDecimal result = new BigDecimal("0.00");
+        int compareResult = comparePrice.compareTo(sumPrice); //compareResult = 1:comparePrice>sumPrice 0:comparePrice=sumPrice -1:comparePrice<sumPrice
+        if(compareResult <= 0){
+            result = subPrice;
+        }
+        return result;
+    }
+    public BigDecimal calculateMaxSubTract(String subTractType,BigDecimal amount,BigDecimal price,BigDecimal sumPrice){
+        BigDecimal maxDisCountPrice = null;
+        String[] subTractTypes = subTractType.split(",");
+        List<BigDecimal> discountPriceCompareList = new ArrayList<BigDecimal>();
+        for(String subTractTypeKey:subTractTypes){
+
+            BigDecimal discountPrice_type1 = new BigDecimal("0.00"); //"1","满3000减350"
+            BigDecimal discountPrice_type2 = new BigDecimal("0.00"); // ("2","每满2000元减30");
+            BigDecimal discountPrice_type3 = new BigDecimal("0.00"); //("3","每满1000元减10");
+            BigDecimal discountPrice_type4 = new BigDecimal("0.00"); //("4","第3件半价");
+            BigDecimal discountPrice_type5 = new BigDecimal("0.00"); //("5","满3送1");
+
+            if("1".equals(subTractTypeKey)){
+                discountPrice_type1 = calculateSubTract(sumPrice,new BigDecimal("3000"),new BigDecimal("350"));
+                discountPriceCompareList.add(discountPrice_type1);
+            }
+            if("2".equals(subTractTypeKey)){
+                discountPrice_type2 = calculateSubTract(sumPrice,new BigDecimal("2000"),new BigDecimal("30"));
+                discountPriceCompareList.add(discountPrice_type2);
+            }
+            if("3".equals(subTractTypeKey)){
+                discountPrice_type3 = calculateSubTract(sumPrice,new BigDecimal("1000"),new BigDecimal("10"));
+                discountPriceCompareList.add(discountPrice_type3);
+            }
+            if("4".equals(subTractTypeKey)){
+                //如果购买的数量大于等于三
+                if(amount.compareTo(new BigDecimal("3.00")) >= 0){
+                    amount = amount.subtract(new BigDecimal("3.00"));
+                    discountPrice_type4 = price.divide(new BigDecimal("2.00"));
+                    discountPriceCompareList.add(discountPrice_type4);
+                }
+            }
+            if("5".equals(subTractTypeKey)){
+                if(amount.compareTo(new BigDecimal("4.00")) >= 0){
+                    discountPrice_type5 = price;
+                    discountPriceCompareList.add(discountPrice_type5);
+                }
+            }
+        }
+        if(discountPriceCompareList.size() > 0){
+            maxDisCountPrice = Collections.max(discountPriceCompareList);
+        }
+        return maxDisCountPrice;
+    }
+
+    public boolean isNotBlank(Object obejct){
+        if(obejct != null && obejct != ""){
+            return true;
+        }
+        return false;
+    }
+
+    public Date StringToDate(String time){
+        Date date = null;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            date = sdf.parse(time); //创建时间
+
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return date;
+    }
+
 }
