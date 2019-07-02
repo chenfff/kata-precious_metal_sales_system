@@ -52,9 +52,9 @@ public class OrderAppTest {
 
     @Test
     public void calculateDiscount() {
-        ProductInfo productInfo = (ProductInfo) ProductInfo.productInfoMap.get("001002");
-        assertEquals(new DiscountItemRepresentation("001002","2019北京世园会纪念银章大全40g",new BigDecimal("414.00")),
-                new OrderApp().calculateDiscount("9折券",new BigDecimal("3.000"),new BigDecimal("4140.000"),productInfo));
+        ProductInfo productInfo = (ProductInfo) ProductInfo.productInfoMap.get("002001");
+        assertEquals(new DiscountItemRepresentation("002001","守扩之羽比翼双飞4.8g",new BigDecimal("5400.00")),
+                new OrderApp().calculateDiscount("95折券",new BigDecimal("100.000"),new BigDecimal("108000.000"),productInfo));
 
     }
 
