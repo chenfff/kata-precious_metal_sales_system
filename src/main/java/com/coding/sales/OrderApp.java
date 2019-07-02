@@ -45,8 +45,6 @@ public class OrderApp {
     OrderRepresentation checkout(OrderCommand command) {
         OrderRepresentation result = null;
 
-        //初始化产品信息
-        Map<String,Object> productInfoMap = initProduct();
         //订单号
         String orderId = command.getOrderId();
         //创建时间
@@ -89,7 +87,8 @@ public class OrderApp {
             //用户购买的数量
             BigDecimal amount = orderItemCommand.getAmount();
             //根据产品编号获取产品信息
-            ProductInfo productInfo = (ProductInfo) productInfoMap.get(product);
+            ProductInfo productInfo = (ProductInfo) ProductInfo.productInfoMap.get(product);
+
             //计算价格总合计
             BigDecimal priceSum = productInfo.getPrice().multiply(amount);
 
@@ -134,68 +133,7 @@ public class OrderApp {
         put("5","满3送1");
     }};
 
-    public static Map<String,Object> initProduct(){
-        Map<String,Object> map = new HashMap<String,Object>();
 
-        ProductInfo productInfo = new ProductInfo();
-        //subtractType 1:满3000减350 2:每满2000元减30 3:每满1000元减10 4:第3件半价 5:满3送1
-        productInfo.setProduct("001001");
-        productInfo.setProductName("世园会五十国钱币册");
-        productInfo.setUnit("册");
-        productInfo.setPrice(BigDecimal.valueOf(998.00));
-        map.put("001001",productInfo);
-
-        ProductInfo productInfo2 = new ProductInfo();
-        productInfo2.setProduct("001002");
-        productInfo2.setProductName("2019北京世园会纪念银章大全40g");
-        productInfo2.setUnit("盒");
-        productInfo2.setPrice(BigDecimal.valueOf(1380.00));
-        productInfo2.setDiscount("9折券");
-        map.put("001002",productInfo2);
-
-        ProductInfo productInfo3 = new ProductInfo();
-        productInfo3.setProduct("003001");
-        productInfo3.setProductName("招财进宝");
-        productInfo3.setUnit("条");
-        productInfo3.setPrice(BigDecimal.valueOf(1580.00));
-        productInfo3.setDiscount("95折券");
-        map.put("003001",productInfo3);
-
-        ProductInfo productInfo4 = new ProductInfo();
-        productInfo4.setProduct("003002");
-        productInfo4.setProductName("水晶之恋");
-        productInfo4.setUnit("条");
-        productInfo4.setPrice(BigDecimal.valueOf(980.00));
-        productInfo4.setSubtractType("4,5");
-        map.put("003002",productInfo4);
-
-        ProductInfo productInfo5 = new ProductInfo();
-        productInfo5.setProduct("002002");
-        productInfo5.setProductName("中国经典钱币套装");
-        productInfo5.setUnit("套");
-        productInfo5.setPrice(BigDecimal.valueOf(998.00));
-        productInfo5.setSubtractType("2,3");
-        map.put("002002",productInfo5);
-
-        ProductInfo productInfo6 = new ProductInfo();
-        productInfo6.setProduct("002001");
-        productInfo6.setProductName("守扩之羽比翼双飞4.8g");
-        productInfo6.setUnit("条");
-        productInfo6.setPrice(BigDecimal.valueOf(1080.00));
-        productInfo6.setSubtractType("4,5");
-        productInfo6.setDiscount("95折券");
-        map.put("002001",productInfo6);
-
-        ProductInfo productInfo7 = new ProductInfo();
-        productInfo7.setProduct("002003");
-        productInfo7.setProductName("中国银象棋12g");
-        productInfo7.setUnit("套");
-        productInfo7.setPrice(BigDecimal.valueOf(698.00));
-        productInfo7.setSubtractType("1,2,3");
-        productInfo7.setDiscount("9折券");
-        map.put("002003",productInfo7);
-        return map;
-    }
 
     /**
      * 计算商品优惠信息
