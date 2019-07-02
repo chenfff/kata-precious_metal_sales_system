@@ -144,9 +144,9 @@ public class OrderApp {
      * @return
      */
     public DiscountItemRepresentation calculateDiscount(String discountCard,BigDecimal amount,BigDecimal sumPrice,ProductInfo productInfo){
-        BigDecimal maxDiscount = null;
-        BigDecimal discountPrice = null;
-        BigDecimal subTranctPrice = null;
+        BigDecimal maxDiscount = new BigDecimal("0.00");;
+        BigDecimal discountPrice = new BigDecimal("0.00");
+        BigDecimal subTranctPrice = new BigDecimal("0.00");;
         BigDecimal price = productInfo.getPrice();
         String productDiscount = productInfo.getDiscount();
         Map<String,BigDecimal> discountMap = new HashMap<String,BigDecimal>();
