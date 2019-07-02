@@ -12,7 +12,7 @@ public class Member {
         put("6236609999",new Member("马丁","6236609999",9860,"普卡"));
         put("6630009999",new Member("王立","6630009999",48860,"金卡"));
         put("8230009999",new Member("李想","8230009999",98860,"白金卡"));
-        put("9230009999",new Member("张三","9230009999",198860,"钻石卡")    );
+        put("9230009999",new Member("张三","9230009999",198860,"钻石卡"));
     }};
     private String memberName;
     private String memberCardNo;
