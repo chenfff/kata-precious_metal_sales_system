@@ -165,7 +165,9 @@ public class OrderApp {
             subTranctPrice =  calculateMaxSubTract(subTractType,amount,price,sumPrice);
             maxDiscountsList.add(subTranctPrice);
         }
-        maxDiscount = Collections.max(maxDiscountsList);
+        if(maxDiscountsList.size() > 0){
+            maxDiscount = Collections.max(maxDiscountsList);
+        }
 
         return new DiscountItemRepresentation(productInfo.getProduct(),productInfo.getProductName(),maxDiscount);
     }
